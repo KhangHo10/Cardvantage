@@ -2,6 +2,7 @@
 let currentUser = null;
 let cards = [];
 
+
 // DOM elements - will be set after DOM loads
 let landingPage, cardManagementPage, loginBtn, logoutBtn;
 let userAvatar, userName, addCardBtn, addCardForm;
@@ -38,7 +39,11 @@ function setupEventListeners() {
         return;
     }
     
-    
+    loginBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        console.log('Login button clicked');
+        handleLogin();
+    });
     
     logoutBtn.addEventListener('click', handleLogout);
     addCardBtn.addEventListener('click', showAddCardForm);
@@ -63,11 +68,18 @@ function checkAuthStatus() {
     }
     
     chrome.storage.local.get(['user', 'cards'], (result) => {
+        console.log('Storage result:', result);
+        
+        // Always load cards, regardless of user status
+        cards = result.cards || [];
+        console.log('Cards loaded:', cards);
+        
         if (result.user) {
             currentUser = result.user;
-            cards = result.cards || [];
+            console.log('User found, showing card management');
             showCardManagement();
         } else {
+            console.log('No user found, showing landing page');
             showLanding();
         }
     });
@@ -183,10 +195,11 @@ function handleLogout() {
             chrome.identity.removeCachedAuthToken({ token: token });
         }
         
-        // Clear local storage
-        chrome.storage.local.clear(() => {
+        // Only clear user data, keep cards
+        chrome.storage.local.remove(['user'], () => {
             currentUser = null;
-            cards = [];
+            // Don't clear cards array - keep them for next login
+            console.log('User logged out, cards preserved');
             showLanding();
         });
     });
@@ -196,6 +209,39 @@ function handleLogout() {
 function showLanding() {
     landingPage.classList.remove('hidden');
     cardManagementPage.classList.add('hidden');
+    
+    // Show card preview if cards exist
+    const cardPreview = document.getElementById('card-preview');
+    const previewCardsList = document.getElementById('preview-cards-list');
+    
+    if (cards.length > 0 && cardPreview && previewCardsList) {
+        console.log('Showing card preview on landing page');
+        cardPreview.classList.remove('hidden');
+        
+        // Show first 3 cards as preview
+        previewCardsList.innerHTML = '';
+        cards.slice(0, 3).forEach(card => {
+            const previewCard = document.createElement('div');
+            previewCard.className = 'preview-card-item';
+            previewCard.innerHTML = `
+                <div class="preview-card-icon">💳</div>
+                <div class="preview-card-name">${escapeHtml(card.name)}</div>
+            `;
+            previewCardsList.appendChild(previewCard);
+        });
+        
+        if (cards.length > 3) {
+            const moreCard = document.createElement('div');
+            moreCard.className = 'preview-card-item';
+            moreCard.innerHTML = `
+                <div class="preview-card-icon">...</div>
+                <div class="preview-card-name">+${cards.length - 3} more cards</div>
+            `;
+            previewCardsList.appendChild(moreCard);
+        }
+    } else if (cardPreview) {
+        cardPreview.classList.add('hidden');
+    }
 }
 
 function showCardManagement() {
@@ -266,9 +312,12 @@ function hideAddCardForm() {
 }
 
 function saveCard() {
+    console.log('saveCard function called');
     const cardName = cardNameInput.value.trim();
+    console.log('Card name:', cardName);
     
     if (!cardName) {
+        console.log('No card name provided');
         cardNameInput.focus();
         return;
     }
@@ -278,10 +327,18 @@ function saveCard() {
         name: cardName,
         dateAdded: new Date().toISOString()
     };
+    console.log('New card object:', newCard);
     
     cards.push(newCard);
+    console.log('Cards array after adding:', cards);
     
     chrome.storage.local.set({ cards: cards }, () => {
+        console.log('Cards saved to storage');
+        if (chrome.runtime.lastError) {
+            console.error('Error saving cards:', chrome.runtime.lastError);
+        } else {
+            console.log('Cards saved successfully');
+        }
         hideAddCardForm();
         renderCards();
     });
@@ -296,19 +353,28 @@ function deleteCard(cardId) {
 }
 
 function renderCards() {
+    console.log('renderCards called');
+    console.log('Cards array:', cards);
+    console.log('Cards list element:', cardsList);
+    
     cardsList.innerHTML = '';
     
     if (cards.length === 0) {
+        console.log('No cards to display, showing empty state');
         emptyState.classList.remove('hidden');
         return;
     }
     
+    console.log('Hiding empty state, showing cards');
     emptyState.classList.add('hidden');
     
     cards.forEach(card => {
+        console.log('Creating card element for:', card.name);
         const cardElement = createCardElement(card);
         cardsList.appendChild(cardElement);
     });
+    
+    console.log('Cards rendered successfully');
 }
 
 function createCardElement(card) {
