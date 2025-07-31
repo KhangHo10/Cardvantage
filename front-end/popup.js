@@ -301,6 +301,10 @@ function showRecommendation(websiteInfo, recommendation) {
         document.querySelector('.card-section').insertBefore(recommendationDisplay, document.querySelector('.cards-list'));
     }
     
+    // Build reward rate display
+    const rewardRate = recommendation.rewardRate || 1.0;
+    const savings = recommendation.savings || '0.00';
+    
     recommendationDisplay.innerHTML = `
         <div class="recommendation-card">
             <div class="recommendation-header">
@@ -315,7 +319,9 @@ function showRecommendation(websiteInfo, recommendation) {
                     <div class="card-icon">💳</div>
                     <div class="card-details">
                         <div class="card-name">${escapeHtml(recommendation.recommendedCard.name)}</div>
+                        <div class="reward-rate">${rewardRate}% cashback</div>
                         <div class="recommendation-reason">${recommendation.reason}</div>
+                        <div class="savings-info">Save $${savings} on a $100 purchase vs. 1% card</div>
                     </div>
                 </div>
             </div>
@@ -342,20 +348,33 @@ function hideAddCardForm() {
 }
 
 function saveCard() {
+    console.log('saveCard function called');
     const cardName = cardNameInput.value.trim();
+    console.log('Card name:', cardName);
     
     if (!cardName) {
+        console.log('No card name provided');
         cardNameInput.focus();
         return;
     }
     
+    // Check if this card name matches a known card type
+    const knownCardRewards = DEFAULT_CARD_REWARDS[cardName];
+    
     const newCard = {
         id: Date.now().toString(),
         name: cardName,
-        dateAdded: new Date().toISOString()
+        dateAdded: new Date().toISOString(),
+        // If it's a known card, use the default rewards structure
+        baseReward: knownCardRewards ? knownCardRewards.baseReward : 1.0,
+        categories: knownCardRewards ? { ...knownCardRewards.categories } : {},
+        rotatingCategories: knownCardRewards ? [...(knownCardRewards.rotatingCategories || [])] : [],
+        isCustom: !knownCardRewards
     };
+    console.log('New card object:', newCard);
     
     cards.push(newCard);
+    console.log('Cards array after adding:', cards);
     
     chrome.storage.local.set({ cards: cards }, () => {
         if (chrome.runtime.lastError) {
@@ -404,29 +423,50 @@ function deleteCard(cardId) {
 }
 
 function renderCards() {
+    console.log('renderCards called');
+    console.log('Cards array:', cards);
+    console.log('Cards list element:', cardsList);
+    
     cardsList.innerHTML = '';
     
     if (cards.length === 0) {
+        console.log('No cards to display, showing empty state');
         emptyState.classList.remove('hidden');
         return;
     }
     
+    console.log('Hiding empty state, showing cards');
     emptyState.classList.add('hidden');
     
     cards.forEach(card => {
+        console.log('Creating card element for:', card.name);
         const cardElement = createCardElement(card);
         cardsList.appendChild(cardElement);
     });
+    
+    console.log('Cards rendered successfully');
 }
 
 function createCardElement(card) {
     const cardDiv = document.createElement('div');
     cardDiv.className = 'card-item';
     
+    // Build reward info display
+    let rewardInfo = `${card.baseReward}% base`;
+    if (card.categories && Object.keys(card.categories).length > 0) {
+        const categoryRewards = Object.entries(card.categories)
+            .map(([category, reward]) => `${category}: ${reward}%`)
+            .join(', ');
+        rewardInfo += ` | ${categoryRewards}`;
+    }
+    
     cardDiv.innerHTML = `
         <div class="card-info">
             <div class="card-icon">💳</div>
-            <div class="card-name">${escapeHtml(card.name)}</div>
+            <div class="card-details">
+                <div class="card-name">${escapeHtml(card.name)}</div>
+                <div class="card-rewards">${rewardInfo}</div>
+            </div>
         </div>
         <button class="delete-btn" data-card-id="${card.id}">Delete</button>
     `;
