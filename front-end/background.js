@@ -10,7 +10,8 @@ chrome.runtime.onInstalled.addListener((details) => {
             chrome.storage.local.set({
                 initialized: true,
                 cards: [],
-                user: null
+                user: null,
+                isAuthenticated: false
             });
         }
     });
@@ -42,6 +43,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             });
             return true;
             
+        case 'checkAuthStatus':
+            chrome.storage.local.get(['user', 'isAuthenticated'], (result) => {
+                sendResponse({ 
+                    isAuthenticated: result.isAuthenticated || false,
+                    user: result.user || null
+                });
+            });
+            return true;
+            
         default:
             sendResponse({ error: 'Unknown action' });
     }
@@ -52,9 +62,9 @@ chrome.identity.onSignInChanged.addListener((account, signedIn) => {
     console.log('Sign-in status changed:', { account, signedIn });
     
     if (!signedIn) {
-        // User signed out, clear stored data
-        chrome.storage.local.remove(['user'], () => {
-            console.log('User data cleared after sign out');
+        // User signed out, clear stored auth data but keep cards
+        chrome.storage.local.remove(['user', 'isAuthenticated'], () => {
+            console.log('User auth data cleared after sign out');
         });
     }
 });
@@ -62,9 +72,7 @@ chrome.identity.onSignInChanged.addListener((account, signedIn) => {
 // Handle storage changes
 chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === 'local') {
-        console.log('Storage changed:', changes);
-        
-        // Notify popup if it's open
+        // Notify popup if it's open about storage changes
         chrome.runtime.sendMessage({ action: 'storageChanged', changes })
             .catch(() => {
                 // Popup not open, ignore error

@@ -1,6 +1,7 @@
 // State management
 let currentUser = null;
 let cards = [];
+let isAuthenticated = false;
 
 // DOM elements - will be set after DOM loads
 let landingPage, cardManagementPage, loginBtn, logoutBtn;
@@ -12,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeDOM();
     checkAuthStatus();
     setupEventListeners();
+    setupMessageListener();
 });
 
 // Initialize DOM elements
@@ -34,11 +36,14 @@ function initializeDOM() {
 // Event listeners
 function setupEventListeners() {
     if (!loginBtn || !logoutBtn || !addCardBtn || !saveCardBtn || !cancelCardBtn || !cardNameInput) {
-        console.error('Some DOM elements are missing, cannot set up event listeners');
+        console.error('Some DOM elements are missing');
         return;
     }
     
-    
+    loginBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        handleLogin();
+    });
     
     logoutBtn.addEventListener('click', handleLogout);
     addCardBtn.addEventListener('click', showAddCardForm);
@@ -53,93 +58,112 @@ function setupEventListeners() {
     });
 }
 
+// Listen for messages from background script
+function setupMessageListener() {
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+        if (request.action === 'storageChanged') {
+            // Refresh auth status when storage changes
+            checkAuthStatus();
+        }
+    });
+}
+
 // Authentication functions
 function checkAuthStatus() {
-    // Check if Chrome APIs are available
     if (!chrome || !chrome.storage) {
         console.error('Chrome storage API not available');
-        alert('Chrome extension APIs not available. Please reload the extension.');
         return;
     }
     
-    chrome.storage.local.get(['user', 'cards'], (result) => {
-        if (result.user) {
+    chrome.storage.local.get(['user', 'cards', 'isAuthenticated'], (result) => {
+        cards = result.cards || [];
+        
+        if (result.user && result.isAuthenticated) {
             currentUser = result.user;
-            cards = result.cards || [];
+            isAuthenticated = true;
             showCardManagement();
         } else {
+            // Don't automatically check for cached tokens - require explicit login
+            isAuthenticated = false;
+            currentUser = null;
             showLanding();
         }
     });
 }
 
 function handleLogin() {
-    console.log('handleLogin function called');
-    
-    // Check if Chrome APIs are available
     if (!chrome || !chrome.storage) {
         console.error('Chrome APIs not available');
         alert('Chrome extension APIs not available. Please reload the extension.');
         return;
     }
     
-    // Check if Chrome identity API is available
     if (!chrome.identity) {
         console.error('Chrome identity API not available');
         alert('Authentication not available. Please check if the extension is properly loaded.');
         return;
     }
     
-    console.log('Starting authentication...');
+    // Always clear any cached tokens to force email/password input
+    chrome.identity.getAuthToken({ interactive: false }, (cachedToken) => {
+        if (cachedToken) {
+            chrome.identity.removeCachedAuthToken({ token: cachedToken }, () => {
+                performInteractiveAuth();
+            });
+        } else {
+            performInteractiveAuth();
+        }
+    });
+}
+
+function performInteractiveAuth() {
+    // Show loading state
+    if (loginBtn) {
+        loginBtn.textContent = 'Signing in...';
+        loginBtn.disabled = true;
+    }
     
-    // Try to get a token with interaction
-    chrome.identity.getAuthToken({ interactive: true }, (token) => {
+    // Force interactive auth which will prompt for email/password
+    chrome.identity.getAuthToken({ 
+        interactive: true
+    }, (token) => {
+        // Restore button state
+        if (loginBtn) {
+            loginBtn.textContent = 'Sign in';
+            loginBtn.disabled = false;
+        }
+        
         if (chrome.runtime.lastError) {
-            console.error('Auth error:', chrome.runtime.lastError);
-            console.error('Error message:', chrome.runtime.lastError.message);
+            console.error('Auth error:', chrome.runtime.lastError.message);
             
-            // If OAuth2 is not configured, show a helpful message
-            if (chrome.runtime.lastError.message.includes('bad client id') || 
-                chrome.runtime.lastError.message.includes('invalid client') ||
-                chrome.runtime.lastError.message.includes('OAuth2 not granted')) {
+            // Handle specific OAuth2 errors
+            const errorMessage = chrome.runtime.lastError.message;
+            if (errorMessage.includes('bad client id') || 
+                errorMessage.includes('invalid client') ||
+                errorMessage.includes('OAuth2 not granted') ||
+                errorMessage.includes('not granted or revoked')) {
                 
-                console.log('OAuth2 configuration issue detected - using demo mode');
-                alert('OAuth2 not configured yet. Using demo mode for now.\n\nYou can set up real authentication later.');
-                
-                // Fallback to demo user with generic info
-                currentUser = {
-                    id: 'demo-user-' + Date.now(),
-                    name: 'Demo User',
-                    email: 'demo@example.com',
-                    picture: 'https://via.placeholder.com/32x32/667eea/ffffff?text=U'
-                };
-                
-                chrome.storage.local.set({ user: currentUser }, () => {
-                    console.log('Demo user data saved, showing card management');
-                    showCardManagement();
-                });
+                console.log('OAuth2 configuration issue, using demo mode');
+                createDemoUser();
             } else {
-                console.log('Other authentication error');
-                alert(`Authentication failed: ${chrome.runtime.lastError.message}\n\nPlease check the console for more details.`);
+                console.error('Authentication error:', errorMessage);
+                alert(`Authentication failed: ${errorMessage}\n\nPlease check your OAuth2 configuration.`);
             }
             return;
         }
         
         if (token) {
-            console.log('Token received, fetching user profile...');
-            console.log('Token length:', token.length);
+            console.log('Token received successfully, fetching user profile...');
             fetchUserProfile(token);
         } else {
-            console.error('No token received');
-            alert('Authentication failed: No token received');
+            console.error('No token received from OAuth2');
+            alert('Authentication failed: No token received. Please try again.');
         }
     });
 }
 
 
 function fetchUserProfile(token) {
-    console.log('Fetching user profile...');
-    
     fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
         headers: {
             'Authorization': `Bearer ${token}`
@@ -152,8 +176,6 @@ function fetchUserProfile(token) {
         return response.json();
     })
     .then(userInfo => {
-        console.log('User profile received:', userInfo);
-        
         currentUser = {
             id: userInfo.id,
             name: userInfo.name,
@@ -161,9 +183,16 @@ function fetchUserProfile(token) {
             picture: userInfo.picture
         };
         
-        chrome.storage.local.set({ user: currentUser }, () => {
-            console.log('User data saved, showing card management');
-            showCardManagement();
+        chrome.storage.local.set({ 
+            user: currentUser, 
+            isAuthenticated: true 
+        }, () => {
+            if (chrome.runtime.lastError) {
+                console.error('Error saving user data:', chrome.runtime.lastError);
+            } else {
+                isAuthenticated = true;
+                showCardManagement();
+            }
         });
     })
     .catch(error => {
@@ -175,50 +204,90 @@ function fetchUserProfile(token) {
 function handleLogout() {
     chrome.identity.getAuthToken({ interactive: false }, (token) => {
         if (token) {
-            // Revoke the token
             fetch(`https://accounts.google.com/o/oauth2/revoke?token=${token}`, {
                 method: 'POST'
             });
-            
             chrome.identity.removeCachedAuthToken({ token: token });
         }
         
-        // Clear local storage
-        chrome.storage.local.clear(() => {
+        chrome.storage.local.remove(['user', 'isAuthenticated'], () => {
             currentUser = null;
-            cards = [];
+            isAuthenticated = false;
             showLanding();
         });
     });
 }
 
 // Page navigation
+function showCardManagement() {
+    try {
+        if (!landingPage || !cardManagementPage) {
+            console.error('Page elements not found!');
+            return;
+        }
+        
+        landingPage.classList.add('hidden');
+        cardManagementPage.classList.remove('hidden');
+        
+        if (currentUser) {
+            if (userAvatar) userAvatar.src = currentUser.picture;
+            if (userName) userName.textContent = currentUser.name;
+        }
+        
+        renderCards();
+        
+        // Analyze current website for recommendations
+        if (cards.length > 0) {
+            getCurrentWebsite().then(websiteInfo => {
+                if (websiteInfo) {
+                    const recommendation = analyzeWebsiteForRecommendations(websiteInfo);
+                    if (recommendation && recommendation.recommendedCard) {
+                        showRecommendation(websiteInfo, recommendation);
+                    }
+                }
+            }).catch(error => {
+                console.error('Error getting website info:', error);
+            });
+        }
+    } catch (error) {
+        console.error('Error in showCardManagement:', error);
+    }
+}
+
 function showLanding() {
     landingPage.classList.remove('hidden');
     cardManagementPage.classList.add('hidden');
-}
-
-function showCardManagement() {
-    landingPage.classList.add('hidden');
-    cardManagementPage.classList.remove('hidden');
     
-    if (currentUser) {
-        if (userAvatar) userAvatar.src = currentUser.picture;
-        if (userName) userName.textContent = currentUser.name;
-    }
+    // Show card preview if cards exist
+    const cardPreview = document.getElementById('card-preview');
+    const previewCardsList = document.getElementById('preview-cards-list');
     
-    renderCards();
-    
-    // Analyze current website for recommendations
-    if (cards.length > 0) {
-        getCurrentWebsite().then(websiteInfo => {
-            if (websiteInfo) {
-                const recommendation = analyzeWebsiteForRecommendations(websiteInfo);
-                if (recommendation && recommendation.recommendedCard) {
-                    showRecommendation(websiteInfo, recommendation);
-                }
-            }
+    if (cards.length > 0 && cardPreview && previewCardsList) {
+        cardPreview.classList.remove('hidden');
+        
+        // Show first 3 cards as preview
+        previewCardsList.innerHTML = '';
+        cards.slice(0, 3).forEach(card => {
+            const previewCard = document.createElement('div');
+            previewCard.className = 'preview-card-item';
+            previewCard.innerHTML = `
+                <div class="preview-card-icon">💳</div>
+                <div class="preview-card-name">${escapeHtml(card.name)}</div>
+            `;
+            previewCardsList.appendChild(previewCard);
         });
+        
+        if (cards.length > 3) {
+            const moreCard = document.createElement('div');
+            moreCard.className = 'preview-card-item';
+            moreCard.innerHTML = `
+                <div class="preview-card-icon">...</div>
+                <div class="preview-card-name">+${cards.length - 3} more cards</div>
+            `;
+            previewCardsList.appendChild(moreCard);
+        }
+    } else if (cardPreview) {
+        cardPreview.classList.add('hidden');
     }
 }
 
@@ -254,6 +323,13 @@ function showRecommendation(websiteInfo, recommendation) {
     `;
 }
 
+function removeRecommendation() {
+    const recommendationDisplay = document.getElementById('recommendation-display');
+    if (recommendationDisplay) {
+        recommendationDisplay.remove();
+    }
+}
+
 // Card management functions
 function showAddCardForm() {
     addCardForm.classList.remove('hidden');
@@ -282,8 +358,22 @@ function saveCard() {
     cards.push(newCard);
     
     chrome.storage.local.set({ cards: cards }, () => {
-        hideAddCardForm();
-        renderCards();
+        if (chrome.runtime.lastError) {
+            console.error('Error saving cards:', chrome.runtime.lastError);
+        } else {
+            hideAddCardForm();
+            renderCards();
+            
+            // Refresh recommendations after adding a new card
+            getCurrentWebsite().then(websiteInfo => {
+                if (websiteInfo) {
+                    const recommendation = analyzeWebsiteForRecommendations(websiteInfo);
+                    if (recommendation && recommendation.recommendedCard) {
+                        showRecommendation(websiteInfo, recommendation);
+                    }
+                }
+            });
+        }
     });
 }
 
@@ -292,6 +382,24 @@ function deleteCard(cardId) {
     
     chrome.storage.local.set({ cards: cards }, () => {
         renderCards();
+        
+        // Refresh recommendations after deleting a card
+        if (cards.length > 0) {
+            getCurrentWebsite().then(websiteInfo => {
+                if (websiteInfo) {
+                    const recommendation = analyzeWebsiteForRecommendations(websiteInfo);
+                    if (recommendation && recommendation.recommendedCard) {
+                        showRecommendation(websiteInfo, recommendation);
+                    } else {
+                        // Remove recommendation if no suitable card found
+                        removeRecommendation();
+                    }
+                }
+            });
+        } else {
+            // Remove recommendation if no cards left
+            removeRecommendation();
+        }
     });
 }
 
@@ -363,6 +471,11 @@ function getCurrentWebsite() {
 function analyzeWebsiteForRecommendations(websiteInfo) {
     if (!websiteInfo) return null;
     
+    // Check if we have any cards
+    if (cards.length === 0) {
+        return null;
+    }
+    
     // This is a placeholder for the recommendation logic
     // In a real implementation, you would:
     // 1. Check the website domain against known merchant categories
@@ -373,30 +486,44 @@ function analyzeWebsiteForRecommendations(websiteInfo) {
     
     // Simple example logic
     if (domain.includes('amazon') || domain.includes('amzn')) {
-        return {
-            recommendedCard: cards.find(card => card.name.toLowerCase().includes('amazon')) || cards[0],
-            reason: 'Amazon purchases often have special rewards',
-            category: 'Online Shopping'
-        };
+        const amazonCard = cards.find(card => card.name.toLowerCase().includes('amazon'));
+        if (amazonCard) {
+            return {
+                recommendedCard: amazonCard,
+                reason: 'Amazon purchases often have special rewards',
+                category: 'Online Shopping'
+            };
+        }
     } else if (domain.includes('restaurant') || domain.includes('food')) {
-        return {
-            recommendedCard: cards.find(card => card.name.toLowerCase().includes('dining')) || cards[0],
-            reason: 'Restaurant purchases typically earn dining rewards',
-            category: 'Dining'
-        };
+        const diningCard = cards.find(card => card.name.toLowerCase().includes('dining'));
+        if (diningCard) {
+            return {
+                recommendedCard: diningCard,
+                reason: 'Restaurant purchases typically earn dining rewards',
+                category: 'Dining'
+            };
+        }
     } else if (domain.includes('gas') || domain.includes('fuel')) {
+        const gasCard = cards.find(card => card.name.toLowerCase().includes('gas'));
+        if (gasCard) {
+            return {
+                recommendedCard: gasCard,
+                reason: 'Gas station purchases earn fuel rewards',
+                category: 'Gas'
+            };
+        }
+    }
+    
+    // Default to first card if no specific match found
+    if (cards.length > 0) {
         return {
-            recommendedCard: cards.find(card => card.name.toLowerCase().includes('gas')) || cards[0],
-            reason: 'Gas station purchases earn fuel rewards',
-            category: 'Gas'
+            recommendedCard: cards[0],
+            reason: 'General purchase - using your default card',
+            category: 'General'
         };
     }
     
-    return {
-        recommendedCard: cards[0],
-        reason: 'General purchase - using your default card',
-        category: 'General'
-    };
+    return null;
 }
 
 // Handle extension updates
