@@ -140,11 +140,9 @@ function performInteractiveAuth() {
             const errorMessage = chrome.runtime.lastError.message;
             if (errorMessage.includes('bad client id') || 
                 errorMessage.includes('invalid client') ||
-                errorMessage.includes('OAuth2 not granted') ||
-                errorMessage.includes('not granted or revoked')) {
+                errorMessage.includes('OAuth2 not granted')) {
                 
                 console.log('OAuth2 configuration issue, using demo mode');
-                createDemoUser();
             } else {
                 console.error('Authentication error:', errorMessage);
                 alert(`Authentication failed: ${errorMessage}\n\nPlease check your OAuth2 configuration.`);
