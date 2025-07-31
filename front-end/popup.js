@@ -2,6 +2,129 @@
 let currentUser = null;
 let cards = [];
 
+// Enhanced merchant categories with reward mappings
+const MERCHANT_CATEGORIES = {
+    // Online Shopping
+    'amazon': { name: 'Amazon', category: 'Online Shopping', defaultReward: 1.0 },
+    'amzn': { name: 'Amazon', category: 'Online Shopping', defaultReward: 1.0 },
+    'walmart': { name: 'Walmart', category: 'Online Shopping', defaultReward: 1.0 },
+    'target': { name: 'Target', category: 'Online Shopping', defaultReward: 1.0 },
+    'ebay': { name: 'eBay', category: 'Online Shopping', defaultReward: 1.0 },
+    'etsy': { name: 'Etsy', category: 'Online Shopping', defaultReward: 1.0 },
+    
+    // Dining & Restaurants
+    'restaurant': { name: 'Restaurant', category: 'Dining', defaultReward: 2.0 },
+    'food': { name: 'Food', category: 'Dining', defaultReward: 2.0 },
+    'dining': { name: 'Dining', category: 'Dining', defaultReward: 2.0 },
+    'grubhub': { name: 'GrubHub', category: 'Dining', defaultReward: 2.0 },
+    'doordash': { name: 'DoorDash', category: 'Dining', defaultReward: 2.0 },
+    'ubereats': { name: 'Uber Eats', category: 'Dining', defaultReward: 2.0 },
+    'starbucks': { name: 'Starbucks', category: 'Dining', defaultReward: 2.0 },
+    'mcdonalds': { name: 'McDonald\'s', category: 'Dining', defaultReward: 2.0 },
+    
+    // Gas & Fuel
+    'gas': { name: 'Gas Station', category: 'Gas', defaultReward: 2.0 },
+    'fuel': { name: 'Fuel', category: 'Gas', defaultReward: 2.0 },
+    'shell': { name: 'Shell', category: 'Gas', defaultReward: 2.0 },
+    'exxon': { name: 'Exxon', category: 'Gas', defaultReward: 2.0 },
+    'mobil': { name: 'Mobil', category: 'Gas', defaultReward: 2.0 },
+    'chevron': { name: 'Chevron', category: 'Gas', defaultReward: 2.0 },
+    
+    // Travel
+    'hotel': { name: 'Hotel', category: 'Travel', defaultReward: 3.0 },
+    'airbnb': { name: 'Airbnb', category: 'Travel', defaultReward: 3.0 },
+    'booking': { name: 'Booking.com', category: 'Travel', defaultReward: 3.0 },
+    'expedia': { name: 'Expedia', category: 'Travel', defaultReward: 3.0 },
+    'kayak': { name: 'Kayak', category: 'Travel', defaultReward: 3.0 },
+    'airline': { name: 'Airline', category: 'Travel', defaultReward: 3.0 },
+    'delta': { name: 'Delta', category: 'Travel', defaultReward: 3.0 },
+    'united': { name: 'United', category: 'Travel', defaultReward: 3.0 },
+    'american': { name: 'American Airlines', category: 'Travel', defaultReward: 3.0 },
+    
+    // Groceries
+    'grocery': { name: 'Grocery Store', category: 'Groceries', defaultReward: 2.0 },
+    'safeway': { name: 'Safeway', category: 'Groceries', defaultReward: 2.0 },
+    'kroger': { name: 'Kroger', category: 'Groceries', defaultReward: 2.0 },
+    'wholefoods': { name: 'Whole Foods', category: 'Groceries', defaultReward: 2.0 },
+    'traderjoes': { name: 'Trader Joe\'s', category: 'Groceries', defaultReward: 2.0 },
+    'sprouts': { name: 'Sprouts', category: 'Groceries', defaultReward: 2.0 },
+    
+    // Entertainment
+    'netflix': { name: 'Netflix', category: 'Entertainment', defaultReward: 1.0 },
+    'spotify': { name: 'Spotify', category: 'Entertainment', defaultReward: 1.0 },
+    'hulu': { name: 'Hulu', category: 'Entertainment', defaultReward: 1.0 },
+    'disney': { name: 'Disney+', category: 'Entertainment', defaultReward: 1.0 },
+    'movie': { name: 'Movie Theater', category: 'Entertainment', defaultReward: 1.0 },
+    'theater': { name: 'Theater', category: 'Entertainment', defaultReward: 1.0 },
+    
+    // Drugstores
+    'cvs': { name: 'CVS', category: 'Drugstores', defaultReward: 1.0 },
+    'walgreens': { name: 'Walgreens', category: 'Drugstores', defaultReward: 1.0 },
+    'riteaid': { name: 'Rite Aid', category: 'Drugstores', defaultReward: 1.0 },
+    'drugstore': { name: 'Drugstore', category: 'Drugstores', defaultReward: 1.0 },
+    
+    // Office & Business
+    'office': { name: 'Office Supply', category: 'Office', defaultReward: 1.0 },
+    'staples': { name: 'Staples', category: 'Office', defaultReward: 1.0 },
+    'officedepot': { name: 'Office Depot', category: 'Office', defaultReward: 1.0 },
+    'business': { name: 'Business', category: 'Office', defaultReward: 1.0 }
+};
+
+// Default card reward structures (common card types)
+const DEFAULT_CARD_REWARDS = {
+    'Chase Freedom': {
+        baseReward: 1.0,
+        categories: {
+            'Dining': 3.0,
+            'Drugstores': 3.0,
+            'Groceries': 3.0,
+            'Gas': 3.0,
+            'Travel': 3.0
+        },
+        rotatingCategories: ['Dining', 'Drugstores', 'Groceries', 'Gas', 'Travel']
+    },
+    'Chase Sapphire Preferred': {
+        baseReward: 1.0,
+        categories: {
+            'Dining': 3.0,
+            'Travel': 3.0,
+            'Online Groceries': 3.0,
+            'Streaming Services': 3.0
+        }
+    },
+    'Chase Sapphire Reserve': {
+        baseReward: 1.0,
+        categories: {
+            'Dining': 3.0,
+            'Travel': 3.0
+        }
+    },
+    'Amex Gold': {
+        baseReward: 1.0,
+        categories: {
+            'Dining': 4.0,
+            'Groceries': 4.0,
+            'Travel': 3.0
+        }
+    },
+    'Amex Platinum': {
+        baseReward: 1.0,
+        categories: {
+            'Dining': 1.0,
+            'Travel': 5.0
+        }
+    },
+    'Citi Double Cash': {
+        baseReward: 2.0,
+        categories: {}
+    },
+    'Discover It': {
+        baseReward: 1.0,
+        categories: {},
+        rotatingCategories: ['Dining', 'Drugstores', 'Groceries', 'Gas', 'Travel', 'Amazon']
+    }
+};
+
 
 // DOM elements - will be set after DOM loads
 let landingPage, cardManagementPage, loginBtn, logoutBtn;
@@ -278,6 +401,10 @@ function showRecommendation(websiteInfo, recommendation) {
         document.querySelector('.card-section').insertBefore(recommendationDisplay, document.querySelector('.cards-list'));
     }
     
+    // Build reward rate display
+    const rewardRate = recommendation.rewardRate || 1.0;
+    const savings = recommendation.savings || '0.00';
+    
     recommendationDisplay.innerHTML = `
         <div class="recommendation-card">
             <div class="recommendation-header">
@@ -292,7 +419,9 @@ function showRecommendation(websiteInfo, recommendation) {
                     <div class="card-icon">💳</div>
                     <div class="card-details">
                         <div class="card-name">${escapeHtml(recommendation.recommendedCard.name)}</div>
+                        <div class="reward-rate">${rewardRate}% cashback</div>
                         <div class="recommendation-reason">${recommendation.reason}</div>
+                        <div class="savings-info">Save $${savings} on a $100 purchase vs. 1% card</div>
                     </div>
                 </div>
             </div>
@@ -322,10 +451,18 @@ function saveCard() {
         return;
     }
     
+    // Check if this card name matches a known card type
+    const knownCardRewards = DEFAULT_CARD_REWARDS[cardName];
+    
     const newCard = {
         id: Date.now().toString(),
         name: cardName,
-        dateAdded: new Date().toISOString()
+        dateAdded: new Date().toISOString(),
+        // If it's a known card, use the default rewards structure
+        baseReward: knownCardRewards ? knownCardRewards.baseReward : 1.0,
+        categories: knownCardRewards ? { ...knownCardRewards.categories } : {},
+        rotatingCategories: knownCardRewards ? [...(knownCardRewards.rotatingCategories || [])] : [],
+        isCustom: !knownCardRewards
     };
     console.log('New card object:', newCard);
     
@@ -381,10 +518,22 @@ function createCardElement(card) {
     const cardDiv = document.createElement('div');
     cardDiv.className = 'card-item';
     
+    // Build reward info display
+    let rewardInfo = `${card.baseReward}% base`;
+    if (card.categories && Object.keys(card.categories).length > 0) {
+        const categoryRewards = Object.entries(card.categories)
+            .map(([category, reward]) => `${category}: ${reward}%`)
+            .join(', ');
+        rewardInfo += ` | ${categoryRewards}`;
+    }
+    
     cardDiv.innerHTML = `
         <div class="card-info">
             <div class="card-icon">💳</div>
-            <div class="card-name">${escapeHtml(card.name)}</div>
+            <div class="card-details">
+                <div class="card-name">${escapeHtml(card.name)}</div>
+                <div class="card-rewards">${rewardInfo}</div>
+            </div>
         </div>
         <button class="delete-btn" data-card-id="${card.id}">Delete</button>
     `;
@@ -427,41 +576,109 @@ function getCurrentWebsite() {
 
 // Analyze website and recommend best card
 function analyzeWebsiteForRecommendations(websiteInfo) {
-    if (!websiteInfo) return null;
-    
-    // This is a placeholder for the recommendation logic
-    // In a real implementation, you would:
-    // 1. Check the website domain against known merchant categories
-    // 2. Compare with user's card reward categories
-    // 3. Return the best card for that purchase
+    if (!websiteInfo || cards.length === 0) return null;
     
     const domain = websiteInfo.domain.toLowerCase();
     
-    // Simple example logic
-    if (domain.includes('amazon') || domain.includes('amzn')) {
+    // Find the merchant category for this domain
+    let merchantCategory = null;
+    let merchantName = null;
+    
+    // Check if domain matches any known merchant
+    for (const [key, merchant] of Object.entries(MERCHANT_CATEGORIES)) {
+        if (domain.includes(key)) {
+            merchantCategory = merchant.category;
+            merchantName = merchant.name;
+            break;
+        }
+    }
+    
+    // If no specific merchant found, try to infer category from domain
+    if (!merchantCategory) {
+        if (domain.includes('restaurant') || domain.includes('food') || domain.includes('dining')) {
+            merchantCategory = 'Dining';
+            merchantName = 'Restaurant';
+        } else if (domain.includes('hotel') || domain.includes('airline') || domain.includes('travel')) {
+            merchantCategory = 'Travel';
+            merchantName = 'Travel';
+        } else if (domain.includes('grocery') || domain.includes('supermarket')) {
+            merchantCategory = 'Groceries';
+            merchantName = 'Grocery Store';
+        } else if (domain.includes('gas') || domain.includes('fuel')) {
+            merchantCategory = 'Gas';
+            merchantName = 'Gas Station';
+        } else {
+            merchantCategory = 'General';
+            merchantName = 'General Purchase';
+        }
+    }
+    
+    // Calculate the best card for this purchase
+    const bestCard = calculateBestCard(merchantCategory, merchantName);
+    
+    if (!bestCard) {
         return {
-            recommendedCard: cards.find(card => card.name.toLowerCase().includes('amazon')) || cards[0],
-            reason: 'Amazon purchases often have special rewards',
-            category: 'Online Shopping'
-        };
-    } else if (domain.includes('restaurant') || domain.includes('food')) {
-        return {
-            recommendedCard: cards.find(card => card.name.toLowerCase().includes('dining')) || cards[0],
-            reason: 'Restaurant purchases typically earn dining rewards',
-            category: 'Dining'
-        };
-    } else if (domain.includes('gas') || domain.includes('fuel')) {
-        return {
-            recommendedCard: cards.find(card => card.name.toLowerCase().includes('gas')) || cards[0],
-            reason: 'Gas station purchases earn fuel rewards',
-            category: 'Gas'
+            recommendedCard: cards[0],
+            reason: `No specific rewards found for ${merchantName} - using your default card`,
+            category: merchantCategory,
+            rewardRate: cards[0].baseReward || 1.0
         };
     }
     
     return {
-        recommendedCard: cards[0],
-        reason: 'General purchase - using your default card',
-        category: 'General'
+        recommendedCard: bestCard.card,
+        reason: bestCard.reason,
+        category: merchantCategory,
+        rewardRate: bestCard.rewardRate,
+        savings: bestCard.savings
+    };
+}
+
+// Calculate the best card for a specific merchant category
+function calculateBestCard(merchantCategory, merchantName) {
+    if (cards.length === 0) return null;
+    
+    let bestCard = null;
+    let bestRewardRate = 0;
+    let bestReason = '';
+    
+    cards.forEach(card => {
+        let rewardRate = card.baseReward || 1.0;
+        let reason = `Base reward rate: ${rewardRate}%`;
+        
+        // Check if this card has category-specific rewards
+        if (card.categories && card.categories[merchantCategory]) {
+            rewardRate = card.categories[merchantCategory];
+            reason = `${merchantCategory} rewards: ${rewardRate}%`;
+        }
+        
+        // Check for rotating categories (simplified - assumes current quarter)
+        if (card.rotatingCategories && card.rotatingCategories.includes(merchantCategory)) {
+            // For rotating categories, we'll assume 5% reward (typical for rotating categories)
+            rewardRate = 5.0;
+            reason = `${merchantCategory} (rotating category): ${rewardRate}%`;
+        }
+        
+        // Update best card if this one has higher rewards
+        if (rewardRate > bestRewardRate) {
+            bestRewardRate = rewardRate;
+            bestCard = card;
+            bestReason = reason;
+        }
+    });
+    
+    if (!bestCard) return null;
+    
+    // Calculate potential savings (example: $100 purchase)
+    const examplePurchase = 100;
+    const baseReward = 1.0; // Assume 1% is the baseline
+    const savings = ((bestRewardRate - baseReward) / 100) * examplePurchase;
+    
+    return {
+        card: bestCard,
+        rewardRate: bestRewardRate,
+        reason: bestReason,
+        savings: savings.toFixed(2)
     };
 }
 
