@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CardVantage</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Landing Page -->
+        <div id="landing-page" class="page">
+            <header class="header">
+                <div class="logo">
+                    <h1>CardVantage</h1>
+                </div>
+                <button id="login-btn" class="login-btn">
+                    <img src="icons/google-icon.svg" alt="Google" class="google-icon">
+                    Sign in with Google
+                </button>
+            </header>
+            
+            <main class="main-content">
+                <div class="hero">
+                    <h2>Get the Best Rewards on Every Purchase</h2>
+                    <p>Add your credit cards and we'll automatically recommend which card gives you the highest rewards for the current website you're shopping on.</p>
+                    <div class="features">
+                        <div class="feature">
+                            <div class="feature-icon">🎯</div>
+                            <h3>Smart Recommendations</h3>
+                            <p>We analyze the current website and suggest your best card for maximum rewards</p>
+                        </div>
+                        <div class="feature">
+                            <div class="feature-icon">💳</div>
+                            <h3>Add Your Cards</h3>
+                            <p>Securely store your credit cards and their reward categories</p>
+                        </div>
+                        <div class="feature">
+                            <div class="feature-icon">💰</div>
+                            <h3>Maximize Rewards</h3>
+                            <p>Never miss out on the best cashback, points, or miles again</p>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- Card Management Page -->
+        <div id="card-management" class="page hidden">
+            <header class="header">
+                <div class="logo">
+                    <h1>CardVantage</h1>
+                </div>
+                <div class="user-info">
+                    <img id="user-avatar" src="" alt="User" class="user-avatar">
+                    <span id="user-name"></span>
+                    <button id="logout-btn" class="logout-btn">Logout</button>
+                </div>
+            </header>
+
+            <main class="main-content">
+                <div class="card-section">
+                    <div class="section-header">
+                        <h2>My Credit Cards</h2>
+                        <button id="add-card-btn" class="add-card-btn">+ Add Card</button>
+                    </div>
+                    <div class="recommendation-banner">
+                        <div class="banner-icon">🎯</div>
+                        <div class="banner-text">
+                            <strong>Smart Recommendations</strong>
+                            <p>We'll analyze the current website and recommend your best card for maximum rewards</p>
+                        </div>
+                    </div>
+
+                    <div id="add-card-form" class="add-card-form hidden">
+                        <div class="form-group">
+                            <label for="card-name">Card Name</label>
+                            <input type="text" id="card-name" placeholder="e.g., Capital One Quicksilver Rewards" maxlength="50">
+                        </div>
+                        <div class="form-actions">
+                            <button id="save-card-btn" class="save-btn">Save Card</button>
+                            <button id="cancel-card-btn" class="cancel-btn">Cancel</button>
+                        </div>
+                    </div>
+
+                    <div id="cards-list" class="cards-list">
+                        <!-- Cards will be dynamically added here -->
+                    </div>
+
+                    <div id="empty-state" class="empty-state">
+                        <div class="empty-icon">💳</div>
+                        <h3>No cards added yet</h3>
+                        <p>Add your credit cards to start getting smart recommendations for the best rewards on every purchase.</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>
