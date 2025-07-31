@@ -197,7 +197,7 @@ function checkAuthStatus() {
         cards = result.cards || [];
         console.log('Cards loaded:', cards);
         
-        if (result.user) {
+        if (result.user && result.user.id) {
             currentUser = result.user;
             console.log('User found, showing card management');
             showCardManagement();
@@ -225,55 +225,41 @@ function handleLogin() {
         return;
     }
     
-    console.log('Starting authentication...');
+    console.log('Starting Google OAuth2 authentication...');
     
-    // Try to get a token with interaction
+    // Show loading state
+    if (loginBtn) {
+        loginBtn.textContent = 'Signing in...';
+        loginBtn.disabled = true;
+    }
+    
+    // Get Google OAuth2 token
     chrome.identity.getAuthToken({ interactive: true }, (token) => {
+        // Restore button state
+        if (loginBtn) {
+            loginBtn.textContent = 'Sign in';
+            loginBtn.disabled = false;
+        }
+        
         if (chrome.runtime.lastError) {
-            console.error('Auth error:', chrome.runtime.lastError);
-            console.error('Error message:', chrome.runtime.lastError.message);
-            
-            // If OAuth2 is not configured, show a helpful message
-            if (chrome.runtime.lastError.message.includes('bad client id') || 
-                chrome.runtime.lastError.message.includes('invalid client') ||
-                chrome.runtime.lastError.message.includes('OAuth2 not granted')) {
-                
-                console.log('OAuth2 configuration issue detected - using demo mode');
-                alert('OAuth2 not configured yet. Using demo mode for now.\n\nYou can set up real authentication later.');
-                
-                // Fallback to demo user with generic info
-                currentUser = {
-                    id: 'demo-user-' + Date.now(),
-                    name: 'Demo User',
-                    email: 'demo@example.com',
-                    picture: 'https://via.placeholder.com/32x32/667eea/ffffff?text=U'
-                };
-                
-                chrome.storage.local.set({ user: currentUser }, () => {
-                    console.log('Demo user data saved, showing card management');
-                    showCardManagement();
-                });
-            } else {
-                console.log('Other authentication error');
-                alert(`Authentication failed: ${chrome.runtime.lastError.message}\n\nPlease check the console for more details.`);
-            }
+            console.error('Google OAuth2 error:', chrome.runtime.lastError);
+            alert(`Google sign-in failed: ${chrome.runtime.lastError.message}\n\nPlease try again.`);
             return;
         }
         
         if (token) {
-            console.log('Token received, fetching user profile...');
-            console.log('Token length:', token.length);
+            console.log('Google OAuth2 token received, fetching user profile...');
             fetchUserProfile(token);
         } else {
-            console.error('No token received');
-            alert('Authentication failed: No token received');
+            console.error('No Google OAuth2 token received');
+            alert('Google sign-in failed: No token received. Please try again.');
         }
     });
 }
 
 
 function fetchUserProfile(token) {
-    console.log('Fetching user profile...');
+    console.log('Fetching Google user profile...');
     
     fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
         headers: {
@@ -287,7 +273,7 @@ function fetchUserProfile(token) {
         return response.json();
     })
     .then(userInfo => {
-        console.log('User profile received:', userInfo);
+        console.log('Google user profile received:', userInfo);
         
         currentUser = {
             id: userInfo.id,
@@ -297,20 +283,20 @@ function fetchUserProfile(token) {
         };
         
         chrome.storage.local.set({ user: currentUser }, () => {
-            console.log('User data saved, showing card management');
+            console.log('Google user data saved, showing card management');
             showCardManagement();
         });
     })
     .catch(error => {
-        console.error('Error fetching user profile:', error);
-        alert(`Failed to fetch user profile: ${error.message}`);
+        console.error('Error fetching Google user profile:', error);
+        alert(`Failed to fetch Google user profile: ${error.message}\n\nPlease try signing in again.`);
     });
 }
 
 function handleLogout() {
     chrome.identity.getAuthToken({ interactive: false }, (token) => {
         if (token) {
-            // Revoke the token
+            // Revoke the Google OAuth2 token
             fetch(`https://accounts.google.com/o/oauth2/revoke?token=${token}`, {
                 method: 'POST'
             });
