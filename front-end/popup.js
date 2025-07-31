@@ -2,15 +2,18 @@
 let currentUser = null;
 let cards = [];
 let isAuthenticated = false;
+let isDarkMode = true; // Default to dark mode
 
 // DOM elements - will be set after DOM loads
 let landingPage, cardManagementPage, loginBtn, logoutBtn;
 let userAvatar, userName, addCardBtn, addCardForm;
 let cardNameInput, saveCardBtn, cancelCardBtn, cardsList, emptyState;
+let themeToggle, themeToggleMgmt;
 
 // Initialize the app
 document.addEventListener('DOMContentLoaded', () => {
     initializeDOM();
+    loadThemePreference();
     checkAuthStatus();
     setupEventListeners();
     setupMessageListener();
@@ -31,6 +34,48 @@ function initializeDOM() {
     cancelCardBtn = document.getElementById('cancel-card-btn');
     cardsList = document.getElementById('cards-list');
     emptyState = document.getElementById('empty-state');
+    themeToggle = document.getElementById('theme-toggle');
+    themeToggleMgmt = document.getElementById('theme-toggle-mgmt');
+}
+
+// Theme management functions
+function loadThemePreference() {
+    chrome.storage.local.get(['isDarkMode'], (result) => {
+        isDarkMode = result.isDarkMode !== undefined ? result.isDarkMode : true;
+        applyTheme();
+        updateToggleStates();
+    });
+}
+
+function applyTheme() {
+    const body = document.body;
+    if (isDarkMode) {
+        body.classList.remove('light-mode');
+    } else {
+        body.classList.add('light-mode');
+    }
+}
+
+function updateToggleStates() {
+    if (themeToggle) {
+        themeToggle.checked = isDarkMode;
+    }
+    if (themeToggleMgmt) {
+        themeToggleMgmt.checked = isDarkMode;
+    }
+}
+
+function toggleTheme() {
+    isDarkMode = !isDarkMode;
+    applyTheme();
+    updateToggleStates();
+    
+    // Save theme preference
+    chrome.storage.local.set({ isDarkMode: isDarkMode }, () => {
+        if (chrome.runtime.lastError) {
+            console.error('Error saving theme preference:', chrome.runtime.lastError);
+        }
+    });
 }
 
 // Event listeners
@@ -49,6 +94,15 @@ function setupEventListeners() {
     addCardBtn.addEventListener('click', showAddCardForm);
     saveCardBtn.addEventListener('click', saveCard);
     cancelCardBtn.addEventListener('click', hideAddCardForm);
+    
+    // Theme toggle event listeners
+    if (themeToggle) {
+        themeToggle.addEventListener('change', toggleTheme);
+    }
+    
+    if (themeToggleMgmt) {
+        themeToggleMgmt.addEventListener('change', toggleTheme);
+    }
     
     // Handle Enter key in card name input
     cardNameInput.addEventListener('keypress', (e) => {
@@ -160,7 +214,6 @@ function performInteractiveAuth() {
     });
 }
 
-
 function fetchUserProfile(token) {
     fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
         headers: {
@@ -227,10 +280,19 @@ function showCardManagement() {
         landingPage.classList.add('hidden');
         cardManagementPage.classList.remove('hidden');
         
+        // Add class for logged in user layout
+        const headerControls = document.querySelector('#card-management .header-controls');
+        if (headerControls) {
+            headerControls.classList.add('user-logged-in');
+        }
+        
         if (currentUser) {
             if (userAvatar) userAvatar.src = currentUser.picture;
             if (userName) userName.textContent = currentUser.name;
         }
+        
+        // Update theme toggle state on page switch
+        updateToggleStates();
         
         renderCards();
         
@@ -255,6 +317,15 @@ function showCardManagement() {
 function showLanding() {
     landingPage.classList.remove('hidden');
     cardManagementPage.classList.add('hidden');
+    
+    // Remove logged in user class when showing landing
+    const headerControls = document.querySelector('#card-management .header-controls');
+    if (headerControls) {
+        headerControls.classList.remove('user-logged-in');
+    }
+    
+    // Update theme toggle state on page switch
+    updateToggleStates();
     
     // Show card preview if cards exist
     const cardPreview = document.getElementById('card-preview');
