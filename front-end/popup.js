@@ -546,7 +546,7 @@ function saveCard() {
             renderCards();
             
             // Clear cache when cards are modified
-            clearCache();
+            // clearCache();
             
             // Don't automatically refresh recommendations after adding a card
             // User needs to click the button manually
@@ -561,7 +561,7 @@ function deleteCard(cardId) {
         renderCards();
         
         // Clear cache when cards are modified
-        clearCache();
+        // clearCache();
         
         // Remove recommendation when a card is deleted
         // since the recommendation might no longer be valid
@@ -639,14 +639,8 @@ function getCache(key) {
 
 // Clear cache
 function clearCache() {
-    chrome.storage.local.get(null, (items) => {
-        // Only remove keys that look like recommendation cache keys
-        const keysToRemove = Object.keys(items).filter(key => key.includes('|'));
-        if (keysToRemove.length > 0) {
-            chrome.storage.local.remove(keysToRemove, () => {
-                console.log('Cache cleared due to card modification');
-            });
-        }
+    chrome.storage.local.clear(() => {
+        console.log('Cache cleared due to card modification');
     });
 }
 
