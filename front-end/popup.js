@@ -142,20 +142,19 @@ async function handleGetRecommendation() {
 
 
         // ===== CACHING HASHTABLE CODE =====
-
-        // const recommendation = null;
-        // if (cache.has(websiteInfo)){
-        //     recommendation = cache.get(websiteInfo);
-        //     console.log("cache hit");
-        // } else { 
-        //     recommendation = await analyzeWebsiteForRecommendations(websiteInfo, cards);
-        //     cache.set(websiteInfo, recommendation);
-        //     console.log("cache miss");
-        // }
-
-
-        // Get recommendation from API
-        const recommendation = await analyzeWebsiteForRecommendations(websiteInfo, cards);
+        
+        // Create a cache key based on website domain and current cards
+        const cacheKey = createCacheKey(websiteInfo.domain, cards);
+        let recommendation = null;
+        
+        if (cache.has(cacheKey)) {
+            recommendation = cache.get(cacheKey);
+            console.log("Cache hit for:", websiteInfo.domain);
+        } else { 
+            recommendation = await analyzeWebsiteForRecommendations(websiteInfo, cards);
+            cache.set(cacheKey, recommendation);
+            console.log("Cache miss for:", websiteInfo.domain);
+        }
         console.log('Recommendation:', recommendation);
 
         if (recommendation && recommendation.recommendations && recommendation.recommendations.length > 0) {
@@ -261,7 +260,6 @@ function performInteractiveAuth() {
                 errorMessage.includes('invalid client') ||
                 errorMessage.includes('OAuth2 not granted')) {
                 
-                console.log('OAuth2 configuration issue, using demo mode');
             } else {
                 console.error('Authentication error:', errorMessage);
                 alert(`Authentication failed: ${errorMessage}\n\nPlease check your OAuth2 configuration.`);
@@ -551,6 +549,9 @@ function saveCard() {
             hideAddCardForm();
             renderCards();
             
+            // Clear cache when cards are modified
+            clearCache();
+            
             // Don't automatically refresh recommendations after adding a card
             // User needs to click the button manually
         }
@@ -562,6 +563,9 @@ function deleteCard(cardId) {
     
     chrome.storage.local.set({ cards: cards }, () => {
         renderCards();
+        
+        // Clear cache when cards are modified
+        clearCache();
         
         // Remove recommendation when a card is deleted
         // since the recommendation might no longer be valid
@@ -613,6 +617,20 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// Create a unique cache key based on website domain and current cards
+function createCacheKey(domain, cards) {
+    // Sort cards by name to ensure consistent cache keys regardless of order
+    const sortedCards = [...cards].sort((a, b) => a.name.localeCompare(b.name));
+    const cardsString = sortedCards.map(card => card.name).join('|');
+    return `${domain}|${cardsString}`;
+}
+
+// Clear cache when cards are modified
+function clearCache() {
+    cache.clear();
+    console.log('Cache cleared due to card modification');
 }
 
 // Get current website for recommendations
