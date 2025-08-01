@@ -639,8 +639,14 @@ function getCache(key) {
 
 // Clear cache
 function clearCache() {
-    chrome.storage.local.clear(() => {
-        console.log('Cache cleared due to card modification');
+    chrome.storage.local.get(null, (items) => {
+        // Only remove keys that look like recommendation cache keys
+        const keysToRemove = Object.keys(items).filter(key => key.includes('|'));
+        if (keysToRemove.length > 0) {
+            chrome.storage.local.remove(keysToRemove, () => {
+                console.log('Cache cleared due to card modification');
+            });
+        }
     });
 }
 
