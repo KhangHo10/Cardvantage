@@ -138,8 +138,19 @@ async function handleGetRecommendation() {
             return;
         }
 
-        // Get recommendation from API
-        const recommendation = await analyzeWebsiteForRecommendations(websiteInfo, cards);
+        // Replace Map-based cache with chrome.storage.local
+
+        // Create a cache key based on website domain and current cards
+        const cacheKey = createCacheKey(websiteInfo.domain, cards);
+        let recommendation = await getCache(cacheKey);
+
+        if (recommendation) {
+            console.log("Cache hit for:", websiteInfo.domain);
+        } else {
+            recommendation = await analyzeWebsiteForRecommendations(websiteInfo, cards);
+            setCache(cacheKey, recommendation);
+            console.log("Cache miss for:", websiteInfo.domain);
+        }
         console.log('Recommendation:', recommendation);
 
         if (recommendation && recommendation.recommendations && recommendation.recommendations.length > 0) {
@@ -245,7 +256,6 @@ function performInteractiveAuth() {
                 errorMessage.includes('invalid client') ||
                 errorMessage.includes('OAuth2 not granted')) {
                 
-                console.log('OAuth2 configuration issue, using demo mode');
             } else {
                 console.error('Authentication error:', errorMessage);
                 alert(`Authentication failed: ${errorMessage}\n\nPlease check your OAuth2 configuration.`);
@@ -535,6 +545,9 @@ function saveCard() {
             hideAddCardForm();
             renderCards();
             
+            // Clear cache when cards are modified
+            clearCache();
+            
             // Don't automatically refresh recommendations after adding a card
             // User needs to click the button manually
         }
@@ -546,6 +559,9 @@ function deleteCard(cardId) {
     
     chrome.storage.local.set({ cards: cards }, () => {
         renderCards();
+        
+        // Clear cache when cards are modified
+        clearCache();
         
         // Remove recommendation when a card is deleted
         // since the recommendation might no longer be valid
@@ -599,6 +615,41 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+// Create a unique cache key based on website domain and current cards
+function createCacheKey(domain, cards) {
+    // Sort cards by name to ensure consistent cache keys regardless of order
+    const sortedCards = [...cards].sort((a, b) => a.name.localeCompare(b.name));
+    const cardsString = sortedCards.map(card => card.name).join('|');
+    return `${domain}|${cardsString}`;
+}
+
+// Save to cache
+function setCache(key, value) {
+    chrome.storage.local.set({ [key]: value });
+}
+
+// Get from cache
+function getCache(key) {
+    return new Promise((resolve) => {
+        chrome.storage.local.get([key], (result) => {
+            resolve(result[key]);
+        });
+    });
+}
+
+// Clear cache
+function clearCache() {
+    chrome.storage.local.get(null, (items) => {
+        // Only remove keys that look like recommendation cache keys
+        const keysToRemove = Object.keys(items).filter(key => key.includes('|'));
+        if (keysToRemove.length > 0) {
+            chrome.storage.local.remove(keysToRemove, () => {
+                console.log('Cache cleared due to card modification');
+            });
+        }
+    });
+}
+
 // Get current website for recommendations
 function getCurrentWebsite() {
     return new Promise((resolve) => {
@@ -627,7 +678,7 @@ async function analyzeWebsiteForRecommendations(websiteInfo, cards) {
         // Prepare the request body
         const requestBody = {
             websiteUrl: websiteInfo.domain,
-            userCards: cards
+            userCards: cards.map(card => ({ name: card.name })) // This sends only the name property
         };
 
         console.log('Requesting recommendation with body:', requestBody);
