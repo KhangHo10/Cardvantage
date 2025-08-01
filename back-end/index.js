@@ -17,6 +17,7 @@ const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({
   model: "gemini-2.5-flash",
   generationConfig: {
+    temperature: 0,
     response_mime_type: "application/json", // This forces the output to be a JSON
   },
 });
@@ -36,7 +37,8 @@ app.post('/api/get-recommendation', async (req, res) => {
 
     Analyze the provided website URL to determine the merchant's spending category (e.g., "Dining", "Travel", "Groceries", "Online Shopping", etc.).
 
-    Then, review the user's list of credit cards. Each card is an object with a "name." Select the top card that offers the highest reward rates for the inferred category. If multiple cards are equally good, include them all (up to 3 maximum).
+    Then, review the user's list of credit cards. Each card is an object with a "name." Select the top card that offers the highest reward rates for the inferred category. If multiple cards are equal in value and are all best, include only those equal cards, maximum 3.
+    Provide specific reward rates in reason when possible, if information not available do not infer or make it up, just do not mention it.
 
     Here is the information:
     
@@ -54,15 +56,6 @@ app.post('/api/get-recommendation', async (req, res) => {
             }
           ]
         }
-
-    Rules:
-        
-    Only recommend cards from the user's provided list
-    Include 1-3 cards maximum
-    If only one card is clearly best, return just that one
-    If multiple cards are equal in value and are all best, include only those equal cards, maximum 3
-    Provide specific reward rates when possible, if information not available do not infer or make it up, just do not mention it.
-    Keep reasons concise but informative (1-2 sentences)
   `;
 
   // Call the AI and return the response

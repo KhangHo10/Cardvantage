@@ -627,7 +627,7 @@ async function analyzeWebsiteForRecommendations(websiteInfo, cards) {
         // Prepare the request body
         const requestBody = {
             websiteUrl: websiteInfo.domain,
-            userCards: cards
+            userCards: cards.map(card => ({ name: card.name })) // This sends only the name property
         };
 
         console.log('Requesting recommendation with body:', requestBody);
