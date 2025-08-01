@@ -270,49 +270,46 @@ function handleLogout() {
 }
 
 // Page navigation
-function showCardManagement() {
-    try {
-        if (!landingPage || !cardManagementPage) {
-            console.error('Page elements not found!');
-            return;
-        }
-        
-        landingPage.classList.add('hidden');
-        cardManagementPage.classList.remove('hidden');
-        
-        // Add class for logged in user layout
-        const headerControls = document.querySelector('#card-management .header-controls');
-        if (headerControls) {
-            headerControls.classList.add('user-logged-in');
-        }
-        
-        if (currentUser) {
-            if (userAvatar) userAvatar.src = currentUser.picture;
-            if (userName) userName.textContent = currentUser.name;
-        }
-        
-        // Update theme toggle state on page switch
-        updateToggleStates();
-        
-        renderCards();
-        
-        // Analyze current website for recommendations
-        if (cards.length > 0) {
-            getCurrentWebsite().then(websiteInfo => {
-                if (websiteInfo) {
-                    const recommendation = analyzeWebsiteForRecommendations(websiteInfo);
-                    if (recommendation && recommendation.recommendedCard) {
-                        showRecommendation(websiteInfo, recommendation);
-                    }
-                }
-            }).catch(error => {
-                console.error('Error getting website info:', error);
-            });
-        }
-    } catch (error) {
-        console.error('Error in showCardManagement:', error);
+async function showCardManagement() {
+  try {
+    if (!landingPage || !cardManagementPage) {
+      console.error('Page elements not found!');
+      return;
     }
+
+    // swap pages
+    landingPage.classList.add('hidden');
+    cardManagementPage.classList.remove('hidden');
+    document.querySelector('#card-management .header-controls')
+      ?.classList.add('user-logged-in');
+
+    if (currentUser) {
+      userAvatar.src = currentUser.picture;
+      userName.textContent = currentUser.name;
+    }
+
+    updateToggleStates();
+    renderCards();
+
+    // only if we have cards
+    if (cards.length === 0) return;
+
+    // grab the current tab info
+    const websiteInfo = await getCurrentWebsite();
+    if (!websiteInfo) return;
+
+    // now await your recommendation
+    const recommendation = await analyzeWebsiteForRecommendations(websiteInfo, cards);
+    console.log('Recommendation:', recommendation);
+
+    if (recommendation && recommendation.recommendedCard) {
+      showRecommendation(websiteInfo, recommendation);
+    }
+  } catch (err) {
+    console.error('Error in showCardManagement:', err);
+  }
 }
+
 
 function showLanding() {
     landingPage.classList.remove('hidden');
@@ -383,7 +380,7 @@ function showRecommendation(websiteInfo, recommendation) {
                 <div class="recommended-card">
                     <div class="card-icon">💳</div>
                     <div class="card-details">
-                        <div class="card-name">${escapeHtml(recommendation.recommendedCard.name)}</div>
+                        <div class="card-name">${escapeHtml(recommendation.recommendedCard)}</div>
                         <div class="recommendation-reason">${recommendation.reason}</div>
                     </div>
                 </div>
@@ -436,7 +433,7 @@ function saveCard() {
             // Refresh recommendations after adding a new card
             getCurrentWebsite().then(websiteInfo => {
                 if (websiteInfo) {
-                    const recommendation = analyzeWebsiteForRecommendations(websiteInfo);
+                    const recommendation = analyzeWebsiteForRecommendations(websiteInfo, cards);
                     if (recommendation && recommendation.recommendedCard) {
                         showRecommendation(websiteInfo, recommendation);
                     }
@@ -456,7 +453,7 @@ function deleteCard(cardId) {
         if (cards.length > 0) {
             getCurrentWebsite().then(websiteInfo => {
                 if (websiteInfo) {
-                    const recommendation = analyzeWebsiteForRecommendations(websiteInfo);
+                    const recommendation = analyzeWebsiteForRecommendations(websiteInfo, cards);
                     if (recommendation && recommendation.recommendedCard) {
                         showRecommendation(websiteInfo, recommendation);
                     } else {
@@ -537,62 +534,71 @@ function getCurrentWebsite() {
 }
 
 // Analyze website and recommend best card
-function analyzeWebsiteForRecommendations(websiteInfo) {
-    if (!websiteInfo) return null;
-    
-    // Check if we have any cards
-    if (cards.length === 0) {
+async function analyzeWebsiteForRecommendations(websiteInfo, cards) {
+    if (!websiteInfo || !cards || cards.length === 0) {
         return null;
     }
     
-    // This is a placeholder for the recommendation logic
-    // In a real implementation, you would:
-    // 1. Check the website domain against known merchant categories
-    // 2. Compare with user's card reward categories
-    // 3. Return the best card for that purchase
-    
-    const domain = websiteInfo.domain.toLowerCase();
-    
-    // Simple example logic
-    if (domain.includes('amazon') || domain.includes('amzn')) {
-        const amazonCard = cards.find(card => card.name.toLowerCase().includes('amazon'));
-        if (amazonCard) {
-            return {
-                recommendedCard: amazonCard,
-                reason: 'Amazon purchases often have special rewards',
-                category: 'Online Shopping'
-            };
-        }
-    } else if (domain.includes('restaurant') || domain.includes('food')) {
-        const diningCard = cards.find(card => card.name.toLowerCase().includes('dining'));
-        if (diningCard) {
-            return {
-                recommendedCard: diningCard,
-                reason: 'Restaurant purchases typically earn dining rewards',
-                category: 'Dining'
-            };
-        }
-    } else if (domain.includes('gas') || domain.includes('fuel')) {
-        const gasCard = cards.find(card => card.name.toLowerCase().includes('gas'));
-        if (gasCard) {
-            return {
-                recommendedCard: gasCard,
-                reason: 'Gas station purchases earn fuel rewards',
-                category: 'Gas'
-            };
-        }
-    }
-    
-    // Default to first card if no specific match found
-    if (cards.length > 0) {
-        return {
-            recommendedCard: cards[0],
-            reason: 'General purchase - using your default card',
-            category: 'General'
+    try {
+        // Prepare the request body
+        const requestBody = {
+            websiteUrl: websiteInfo.domain,
+            userCards: cards
         };
+
+        console.log('Requesting recommendation with body:', requestBody);
+        
+        // Make POST request to your API endpoint
+        const response = await fetch('http://localhost:8080/api/get-recommendation', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        console.log('API response status:', response.status);
+        console.log('API response:', response);
+        
+        // Check if the response is successful
+        if (!response.ok) {
+            throw new Error(`API request failed with status: ${response.status}`);
+        }
+        
+        // Parse the response
+        const apiResponse = await response.json();
+        
+        // Validate the API response structure
+        if (!apiResponse.recommendedCard) {
+            console.warn('API response missing recommendedCard');
+            return null;
+        }
+        
+        // Find the recommended card in the user's cards array
+        const recommendedCard = apiResponse.recommendedCard;
+        const category = apiResponse.category;
+        const reason = apiResponse.reason;
+
+        
+        if (!recommendedCard) {
+            console.warn('Recommended card not found in user cards');
+            return null;
+        }
+        
+        // Return the recommendation in the expected format
+        console.log('API recommendation:', recommendedCard, reason, category);
+        return {
+            recommendedCard: recommendedCard,
+            reason: apiResponse.reason || 'API recommendation',
+            category: apiResponse.category || 'General',
+        };
+        
+    } catch (error) {
+        console.error('Error calling recommendation API:', error);
+        
+        // Fallback to simple local logic if API fails
+        return null;
     }
-    
-    return null;
 }
 
 // Handle extension updates
