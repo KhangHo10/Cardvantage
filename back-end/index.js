@@ -36,31 +36,33 @@ app.post('/api/get-recommendation', async (req, res) => {
 
     Analyze the provided website URL to determine the merchant's spending category (e.g., "Dining", "Travel", "Groceries", "Online Shopping", etc.).
 
-    Then, review the user's list of credit cards. Each card is an object with a "name." Select the top 1-3 cards that offer the highest reward rates for the inferred category. If multiple cards are equally good, include them all (up to 3 maximum).
+    Then, review the user's list of credit cards. Each card is an object with a "name." Select the top card that offers the highest reward rates for the inferred category. If multiple cards are equally good, include them all (up to 3 maximum).
 
     Here is the information:
-    - Website URL: "${websiteUrl}"
-    - User's Credit Cards: ${JSON.stringify(userCards)}
+    
+    Website URL: "${websiteUrl}"
+    User's Credit Cards: ${JSON.stringify(userCards)}
 
-    Your response must be a valid JSON object with the following structure:
-    {
-      "category": "The spending category (e.g., 'Dining', 'Travel')",
-      "recommendations": [
+        Your response must be a valid JSON object with the following structure:
         {
-          "cardName": "Exact card name from user's list",
-          "reason": "Detailed explanation of why this card is recommended for this category",
-          "rewardRate": "The reward rate or benefit (e.g., '2% cashback', '3x points')"
+          "category": "The spending category (e.g., 'Dining', 'Travel')",
+          "recommendations": [
+            {
+              "cardName": "Exact card name from user's list",
+              "reason": "Detailed explanation of why this card is recommended for this category",
+              "rewardRate": "The reward rate or benefit (e.g., '2% cashback', '3x points')"
+            }
+          ]
         }
-      ]
-    }
 
     Rules:
-    - Only recommend cards from the user's provided list
-    - Include 1-3 cards maximum
-    - If only one card is clearly best, return just that one
-    - If multiple cards are close in value, include up to 3
-    - Provide specific reward rates when possible
-    - Keep reasons concise but informative (1-2 sentences)
+        
+    Only recommend cards from the user's provided list
+    Include 1-3 cards maximum
+    If only one card is clearly best, return just that one
+    If multiple cards are equal in value and are all best, include only those equal cards, maximum 3
+    Provide specific reward rates when possible, if information not available do not infer or make it up, just do not mention it.
+    Keep reasons concise but informative (1-2 sentences)
   `;
 
   // Call the AI and return the response
