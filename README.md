@@ -91,8 +91,8 @@ Follow these steps to set up and run the project locally.
 * **Developing into an app:** After connecting to databases and running server side caching, we can then connect Cardvantage into a mobile app to give users savings on mobile shopping as well.
 
 ## Contributors
-Ethan Ma
-Abel Addis
-Khang Ho
-Jenny Suwanchote
+Ethan Ma <br />
+Abel Addis <br />
+Khang Ho <br />
+Jenny Suwanchote <br />
 Tianyi Shao
