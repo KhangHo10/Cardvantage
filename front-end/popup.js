@@ -10,8 +10,6 @@ let userAvatar, userName, addCardBtn, addCardForm;
 let cardNameInput, saveCardBtn, cancelCardBtn, cardsList, emptyState;
 let themeToggle, themeToggleMgmt, getRecommendationBtn;
 
-let cache = new Map();
-
 // Initialize the app
 document.addEventListener('DOMContentLoaded', () => {
     initializeDOM();
@@ -140,19 +138,17 @@ async function handleGetRecommendation() {
             return;
         }
 
+        // Replace Map-based cache with chrome.storage.local
 
-        // ===== CACHING HASHTABLE CODE =====
-        
         // Create a cache key based on website domain and current cards
         const cacheKey = createCacheKey(websiteInfo.domain, cards);
-        let recommendation = null;
-        
-        if (cache.has(cacheKey)) {
-            recommendation = cache.get(cacheKey);
+        let recommendation = await getCache(cacheKey);
+
+        if (recommendation) {
             console.log("Cache hit for:", websiteInfo.domain);
-        } else { 
+        } else {
             recommendation = await analyzeWebsiteForRecommendations(websiteInfo, cards);
-            cache.set(cacheKey, recommendation);
+            setCache(cacheKey, recommendation);
             console.log("Cache miss for:", websiteInfo.domain);
         }
         console.log('Recommendation:', recommendation);
@@ -627,10 +623,25 @@ function createCacheKey(domain, cards) {
     return `${domain}|${cardsString}`;
 }
 
-// Clear cache when cards are modified
+// Save to cache
+function setCache(key, value) {
+    chrome.storage.local.set({ [key]: value });
+}
+
+// Get from cache
+function getCache(key) {
+    return new Promise((resolve) => {
+        chrome.storage.local.get([key], (result) => {
+            resolve(result[key]);
+        });
+    });
+}
+
+// Clear cache
 function clearCache() {
-    cache.clear();
-    console.log('Cache cleared due to card modification');
+    chrome.storage.local.clear(() => {
+        console.log('Cache cleared due to card modification');
+    });
 }
 
 // Get current website for recommendations
