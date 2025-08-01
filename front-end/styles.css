@@ -571,7 +571,7 @@ body.light-mode::before {
     color: rgba(30, 41, 59, 0.8);
 }
 
-/* Recommendation Display */
+/* Recommendation Display - Updated styles for multiple cards */
 .recommendation-display {
     margin-bottom: 20px;
 }
@@ -604,7 +604,7 @@ body.light-mode::before {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 12px;
+    margin-bottom: 16px;
 }
 
 .recommendation-icon {
@@ -623,6 +623,7 @@ body.light-mode::before {
     font-size: 16px;
     font-weight: 600;
     color: #ffffff;
+    margin-bottom: 2px;
     transition: color 0.3s ease;
 }
 
@@ -642,19 +643,28 @@ body.light-mode::before {
 }
 
 .recommendation-content {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
-    padding: 16px;
-    transition: background 0.3s ease;
-}
-
-.light-mode .recommendation-content {
-    background: rgba(71, 85, 105, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .recommended-card {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.light-mode .recommended-card {
+    background: rgba(71, 85, 105, 0.1);
+    border: 1px solid rgba(71, 85, 105, 0.2);
+}
+
+.card-main-info {
     display: flex;
     align-items: center;
+    padding: 16px;
     gap: 12px;
 }
 
@@ -669,6 +679,11 @@ body.light-mode::before {
     font-size: 10px;
     color: white;
     font-weight: bold;
+    flex-shrink: 0;
+}
+
+.card-details {
+    flex: 1;
 }
 
 .card-details .card-name {
@@ -683,15 +698,212 @@ body.light-mode::before {
     color: #1e293b;
 }
 
-.recommendation-reason {
+.reward-rate {
     font-size: 12px;
-    color: rgba(255, 255, 255, 0.7);
-    line-height: 1.3;
+    color: rgba(16, 185, 129, 1);
+    font-weight: 600;
+    background: rgba(16, 185, 129, 0.1);
+    padding: 2px 8px;
+    border-radius: 12px;
+    display: inline-block;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.expand-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+}
+
+.light-mode .expand-btn {
+    color: rgba(30, 41, 59, 0.6);
+}
+
+.expand-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.light-mode .expand-btn:hover {
+    background: rgba(71, 85, 105, 0.2);
+    color: rgba(30, 41, 59, 0.9);
+}
+
+.expand-icon {
+    font-size: 12px;
+    transition: all 0.3s ease;
+}
+
+.card-reason {
+    background: rgba(255, 255, 255, 0.03);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+    max-height: 200px;
+    transition: all 0.4s ease;
+    opacity: 1;
+}
+
+.light-mode .card-reason {
+    background: rgba(71, 85, 105, 0.05);
+    border-top: 1px solid rgba(71, 85, 105, 0.15);
+}
+
+.card-reason.hidden {
+    max-height: 0;
+    opacity: 0;
+    border-top: none;
+    padding: 0;
+    transition: all 0.4s ease;
+}
+
+.card-reason.hidden .reason-content {
+    padding: 0;
+    transition: padding 0.3s ease;
+}
+
+.reason-content {
+    padding: 16px;
+    transition: padding 0.3s ease;
+}
+
+.reason-text {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1.5;
     transition: color 0.3s ease;
 }
 
-.light-mode .recommendation-reason {
-    color: rgba(30, 41, 59, 0.7);
+.light-mode .reason-text {
+    color: rgba(30, 41, 59, 0.8);
+}
+
+/* Enhanced expand button with better hover effects */
+.expand-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+}
+
+.light-mode .expand-btn {
+    color: rgba(30, 41, 59, 0.6);
+}
+
+.expand-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+    transform: scale(1.05);
+}
+
+.light-mode .expand-btn:hover {
+    background: rgba(71, 85, 105, 0.2);
+    color: rgba(30, 41, 59, 0.9);
+}
+
+.expand-icon {
+    font-size: 14px;
+    transition: all 0.3s ease;
+    font-weight: bold;
+}
+
+/* Enhanced recommended card styling */
+.recommended-card {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+    transition: all 0.3s ease;
+    margin-bottom: 4px;
+}
+
+.light-mode .recommended-card {
+    background: rgba(71, 85, 105, 0.1);
+    border: 1px solid rgba(71, 85, 105, 0.2);
+}
+
+.recommended-card:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(99, 102, 241, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+}
+
+.light-mode .recommended-card:hover {
+    background: rgba(71, 85, 105, 0.15);
+    box-shadow: 0 4px 12px rgba(71, 85, 105, 0.2);
+}
+
+.card-main-info {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    gap: 12px;
+    cursor: pointer;
+}
+
+/* Make the entire card header clickable */
+.card-main-info:hover .expand-btn {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.light-mode .card-main-info:hover .expand-btn {
+    background: rgba(71, 85, 105, 0.2);
+    color: rgba(30, 41, 59, 0.9);
+}
+
+/* Better reward rate styling */
+.reward-rate {
+    font-size: 12px;
+    color: rgba(16, 185, 129, 1);
+    font-weight: 600;
+    background: rgba(16, 185, 129, 0.15);
+    padding: 4px 10px;
+    border-radius: 16px;
+    display: inline-block;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    margin-top: 4px;
+    transition: all 0.3s ease;
+}
+
+.light-mode .reward-rate {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+/* Animation for when cards are added */
+.recommended-card {
+    animation: slideInFromTop 0.4s ease-out;
+}
+
+@keyframes slideInFromTop {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* Add Card Form */

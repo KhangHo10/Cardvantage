@@ -302,14 +302,13 @@ async function showCardManagement() {
     const recommendation = await analyzeWebsiteForRecommendations(websiteInfo, cards);
     console.log('Recommendation:', recommendation);
 
-    if (recommendation && recommendation.recommendedCard) {
-      showRecommendation(websiteInfo, recommendation);
+    if (recommendation && recommendation.recommendations && recommendation.recommendations.length > 0) {
+      showRecommendations(websiteInfo, recommendation);
     }
   } catch (err) {
     console.error('Error in showCardManagement:', err);
   }
 }
-
 
 function showLanding() {
     landingPage.classList.remove('hidden');
@@ -357,7 +356,7 @@ function showLanding() {
     }
 }
 
-function showRecommendation(websiteInfo, recommendation) {
+function showRecommendations(websiteInfo, recommendation) {
     // Create or update recommendation display
     let recommendationDisplay = document.getElementById('recommendation-display');
     if (!recommendationDisplay) {
@@ -367,27 +366,84 @@ function showRecommendation(websiteInfo, recommendation) {
         document.querySelector('.card-section').insertBefore(recommendationDisplay, document.querySelector('.cards-list'));
     }
     
+    const { category, recommendations } = recommendation;
+    const isMultiple = recommendations.length > 1;
+    
     recommendationDisplay.innerHTML = `
         <div class="recommendation-card">
             <div class="recommendation-header">
                 <div class="recommendation-icon">🎯</div>
                 <div class="recommendation-title">
-                    <strong>Best Card for ${websiteInfo.domain}</strong>
-                    <span class="recommendation-category">${recommendation.category}</span>
+                    <strong>Best Card${isMultiple ? 's' : ''} for ${websiteInfo.domain}</strong>
+                    <span class="recommendation-category">${category}</span>
                 </div>
             </div>
             <div class="recommendation-content">
-                <div class="recommended-card">
-                    <div class="card-icon">💳</div>
-                    <div class="card-details">
-                        <div class="card-name">${escapeHtml(recommendation.recommendedCard)}</div>
-                        <div class="recommendation-reason">${recommendation.reason}</div>
+                ${recommendations.map((rec, index) => `
+                    <div class="recommended-card" data-index="${index}">
+                        <div class="card-main-info">
+                            <div class="card-icon">💳</div>
+                            <div class="card-details">
+                                <div class="card-name">${escapeHtml(rec.cardName)}</div>
+                                ${rec.rewardRate ? `<div class="reward-rate">${escapeHtml(rec.rewardRate)}</div>` : ''}
+                            </div>
+                            <button class="expand-btn" data-card-index="${index}" aria-label="Show details">
+                                <span class="expand-icon">▼</span>
+                            </button>
+                        </div>
+                        <div class="card-reason hidden" id="reason-${index}">
+                            <div class="reason-content">
+                                <div class="reason-text">${escapeHtml(rec.reason)}</div>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                `).join('')}
             </div>
         </div>
     `;
+    
+    // Add event listeners for the expand buttons after creating the HTML
+    const expandButtons = recommendationDisplay.querySelectorAll('.expand-btn');
+    expandButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const cardIndex = this.getAttribute('data-card-index');
+            toggleReason(cardIndex);
+        });
+    });
 }
+
+// Update the toggleReason function to be more robust
+function toggleReason(index) {
+    const reasonElement = document.getElementById(`reason-${index}`);
+    const expandBtn = document.querySelector(`[data-card-index="${index}"]`);
+    const expandIcon = expandBtn ? expandBtn.querySelector('.expand-icon') : null;
+    
+    if (!reasonElement || !expandBtn || !expandIcon) {
+        console.error('Could not find elements for card index:', index);
+        return;
+    }
+    
+    if (reasonElement.classList.contains('hidden')) {
+        // Show the reason
+        reasonElement.classList.remove('hidden');
+        expandIcon.textContent = '▲';
+        expandBtn.setAttribute('aria-label', 'Hide details');
+        
+        // Add smooth animation
+        reasonElement.style.maxHeight = reasonElement.scrollHeight + 'px';
+    } else {
+        // Hide the reason
+        reasonElement.classList.add('hidden');
+        expandIcon.textContent = '▼';
+        expandBtn.setAttribute('aria-label', 'Show details');
+        
+        // Add smooth animation
+        reasonElement.style.maxHeight = '0px';
+    }
+}
+
+// Also update the global toggleReason function (keep this for backward compatibility)
+window.toggleReason = toggleReason;
 
 function removeRecommendation() {
     const recommendationDisplay = document.getElementById('recommendation-display');
@@ -433,10 +489,11 @@ function saveCard() {
             // Refresh recommendations after adding a new card
             getCurrentWebsite().then(websiteInfo => {
                 if (websiteInfo) {
-                    const recommendation = analyzeWebsiteForRecommendations(websiteInfo, cards);
-                    if (recommendation && recommendation.recommendedCard) {
-                        showRecommendation(websiteInfo, recommendation);
-                    }
+                    analyzeWebsiteForRecommendations(websiteInfo, cards).then(recommendation => {
+                        if (recommendation && recommendation.recommendations && recommendation.recommendations.length > 0) {
+                            showRecommendations(websiteInfo, recommendation);
+                        }
+                    });
                 }
             });
         }
@@ -453,13 +510,14 @@ function deleteCard(cardId) {
         if (cards.length > 0) {
             getCurrentWebsite().then(websiteInfo => {
                 if (websiteInfo) {
-                    const recommendation = analyzeWebsiteForRecommendations(websiteInfo, cards);
-                    if (recommendation && recommendation.recommendedCard) {
-                        showRecommendation(websiteInfo, recommendation);
-                    } else {
-                        // Remove recommendation if no suitable card found
-                        removeRecommendation();
-                    }
+                    analyzeWebsiteForRecommendations(websiteInfo, cards).then(recommendation => {
+                        if (recommendation && recommendation.recommendations && recommendation.recommendations.length > 0) {
+                            showRecommendations(websiteInfo, recommendation);
+                        } else {
+                            // Remove recommendation if no suitable card found
+                            removeRecommendation();
+                        }
+                    });
                 }
             });
         } else {
@@ -558,7 +616,6 @@ async function analyzeWebsiteForRecommendations(websiteInfo, cards) {
         });
 
         console.log('API response status:', response.status);
-        console.log('API response:', response);
         
         // Check if the response is successful
         if (!response.ok) {
@@ -569,29 +626,13 @@ async function analyzeWebsiteForRecommendations(websiteInfo, cards) {
         const apiResponse = await response.json();
         
         // Validate the API response structure
-        if (!apiResponse.recommendedCard) {
-            console.warn('API response missing recommendedCard');
+        if (!apiResponse.recommendations || !Array.isArray(apiResponse.recommendations)) {
+            console.warn('API response missing recommendations array');
             return null;
         }
         
-        // Find the recommended card in the user's cards array
-        const recommendedCard = apiResponse.recommendedCard;
-        const category = apiResponse.category;
-        const reason = apiResponse.reason;
-
-        
-        if (!recommendedCard) {
-            console.warn('Recommended card not found in user cards');
-            return null;
-        }
-        
-        // Return the recommendation in the expected format
-        console.log('API recommendation:', recommendedCard, reason, category);
-        return {
-            recommendedCard: recommendedCard,
-            reason: apiResponse.reason || 'API recommendation',
-            category: apiResponse.category || 'General',
-        };
+        console.log('API recommendation:', apiResponse);
+        return apiResponse;
         
     } catch (error) {
         console.error('Error calling recommendation API:', error);
