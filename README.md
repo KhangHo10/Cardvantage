@@ -84,7 +84,7 @@ Follow these steps to set up and run the project locally.
 
 ## What's Next for Cardvantage
 
-* **Welcome Bonus Tracking:** Help users track their spending towards earning lucrative sign-up bonuses.
-* **Benefit Management:** Allow users to add and manage annual card benefits, like statement credits for travel or dining.
-* **Annual Fee Reminders:** Notify users before an annual fee is charged, helping them decide whether to keep or downgrade a card.
-* **Firefox & Safari Extensions:** Expand Cardvantage to support other major browsers.
+* **Server side caching:** Connect to MongoDB or SQLite to enable server side caching, eliminating the risk of cache being lost due to local resets.
+* **Savings tracking:** Track total savings over time and display with a visual (e.g. a growing tree) to show the user how much they have saved and encourage continued savings.
+* **Integration with budgeting tools:** Integrating with budgeting tools like Rocket Money and Honeydue to get a wider audience saving on credit rewards.
+* **Developing into an app:** After connecting to databases and running server side caching, we can then connect Cardvantage into a mobile app to give users savings on mobile shopping as well.
