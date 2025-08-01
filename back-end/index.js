@@ -42,8 +42,8 @@ app.post('/api/get-recommendation', async (req, res) => {
     - Website URL: "${websiteUrl}"
     - User's Credit Cards: ${JSON.stringify(userCards)}
 
-    Your response must be a valid JSON object with ONLY the following keys: "bestCardName", "inferredCategory", and "reasoning".
-    For example: { "bestCardName": "Capital One SavorOne", "inferredCategory": "Dining", "reasoning": "This card offers the highest rewards for dining." }
+    Your response must be a valid JSON object with ONLY the following keys: "recommendedCard", "category", and "reason".
+    For example: { "recommendedCard": "Capital One SavorOne", "category": "Dining", "reason": "This card offers the highest rewards for dining." }
   `;
 
   // Call the AI and return the response
