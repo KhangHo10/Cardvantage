@@ -8,7 +8,7 @@ let isDarkMode = true; // Default to dark mode
 let landingPage, cardManagementPage, loginBtn, logoutBtn;
 let userAvatar, userName, addCardBtn, addCardForm;
 let cardNameInput, saveCardBtn, cancelCardBtn, cardsList, emptyState;
-let themeToggle, themeToggleMgmt;
+let themeToggle, themeToggleMgmt, getRecommendationBtn;
 
 // Initialize the app
 document.addEventListener('DOMContentLoaded', () => {
@@ -36,6 +36,7 @@ function initializeDOM() {
     emptyState = document.getElementById('empty-state');
     themeToggle = document.getElementById('theme-toggle');
     themeToggleMgmt = document.getElementById('theme-toggle-mgmt');
+    getRecommendationBtn = document.getElementById('get-recommendation-btn');
 }
 
 // Theme management functions
@@ -95,6 +96,11 @@ function setupEventListeners() {
     saveCardBtn.addEventListener('click', saveCard);
     cancelCardBtn.addEventListener('click', hideAddCardForm);
     
+    // New event listener for get recommendation button
+    if (getRecommendationBtn) {
+        getRecommendationBtn.addEventListener('click', handleGetRecommendation);
+    }
+    
     // Theme toggle event listeners
     if (themeToggle) {
         themeToggle.addEventListener('change', toggleTheme);
@@ -110,6 +116,49 @@ function setupEventListeners() {
             saveCard();
         }
     });
+}
+
+// New function to handle manual recommendation request
+async function handleGetRecommendation() {
+    if (cards.length === 0) {
+        alert('Please add at least one credit card to get recommendations.');
+        return;
+    }
+
+    // Show loading state
+    const originalText = getRecommendationBtn.textContent;
+    getRecommendationBtn.textContent = 'Getting Recommendation...';
+    getRecommendationBtn.disabled = true;
+
+    try {
+        // Get current website info
+        const websiteInfo = await getCurrentWebsite();
+        if (!websiteInfo) {
+            alert('Unable to get current website information. Please make sure you\'re on a valid website.');
+            return;
+        }
+
+        // Get recommendation from API
+        const recommendation = await analyzeWebsiteForRecommendations(websiteInfo, cards);
+        console.log('Recommendation:', recommendation);
+
+        if (recommendation && recommendation.recommendations && recommendation.recommendations.length > 0) {
+            showRecommendations(websiteInfo, recommendation);
+            // Update button text to show success
+            getRecommendationBtn.textContent = 'Get New Recommendation';
+        } else {
+            // Remove any existing recommendations
+            removeRecommendation();
+            alert('No suitable card recommendations found for this website.');
+        }
+    } catch (error) {
+        console.error('Error getting recommendation:', error);
+        alert('Failed to get recommendation. Please try again.');
+    } finally {
+        // Restore button state
+        getRecommendationBtn.textContent = originalText;
+        getRecommendationBtn.disabled = false;
+    }
 }
 
 // Listen for messages from background script
@@ -269,45 +318,34 @@ function handleLogout() {
     });
 }
 
-// Page navigation
+// Page navigation - UPDATED: Removed automatic recommendation call
 async function showCardManagement() {
-  try {
-    if (!landingPage || !cardManagementPage) {
-      console.error('Page elements not found!');
-      return;
+    try {
+        if (!landingPage || !cardManagementPage) {
+            console.error('Page elements not found!');
+            return;
+        }
+
+        // swap pages
+        landingPage.classList.add('hidden');
+        cardManagementPage.classList.remove('hidden');
+        document.querySelector('#card-management .header-controls')
+            ?.classList.add('user-logged-in');
+
+        if (currentUser) {
+            userAvatar.src = currentUser.picture;
+            userName.textContent = currentUser.name;
+        }
+
+        updateToggleStates();
+        renderCards();
+
+        // Remove automatic recommendation call - now it's manual only
+        console.log('Card management page loaded. User can now click "Get Recommendation" button.');
+
+    } catch (err) {
+        console.error('Error in showCardManagement:', err);
     }
-
-    // swap pages
-    landingPage.classList.add('hidden');
-    cardManagementPage.classList.remove('hidden');
-    document.querySelector('#card-management .header-controls')
-      ?.classList.add('user-logged-in');
-
-    if (currentUser) {
-      userAvatar.src = currentUser.picture;
-      userName.textContent = currentUser.name;
-    }
-
-    updateToggleStates();
-    renderCards();
-
-    // only if we have cards
-    if (cards.length === 0) return;
-
-    // grab the current tab info
-    const websiteInfo = await getCurrentWebsite();
-    if (!websiteInfo) return;
-
-    // now await your recommendation
-    const recommendation = await analyzeWebsiteForRecommendations(websiteInfo, cards);
-    console.log('Recommendation:', recommendation);
-
-    if (recommendation && recommendation.recommendations && recommendation.recommendations.length > 0) {
-      showRecommendations(websiteInfo, recommendation);
-    }
-  } catch (err) {
-    console.error('Error in showCardManagement:', err);
-  }
 }
 
 function showLanding() {
@@ -429,16 +467,27 @@ function toggleReason(index) {
         expandIcon.textContent = '▲';
         expandBtn.setAttribute('aria-label', 'Hide details');
         
-        // Add smooth animation
-        reasonElement.style.maxHeight = reasonElement.scrollHeight + 'px';
+        // Reset max-height to allow full content to show
+        reasonElement.style.maxHeight = 'none';
+        reasonElement.style.overflow = 'visible';
     } else {
         // Hide the reason
-        reasonElement.classList.add('hidden');
+        // First set a specific height to enable smooth transition
+        reasonElement.style.maxHeight = reasonElement.scrollHeight + 'px';
+        reasonElement.style.overflow = 'hidden';
+        
+        // Force a reflow to ensure the height is set
+        reasonElement.offsetHeight;
+        
+        // Then collapse it
+        reasonElement.style.maxHeight = '0px';
         expandIcon.textContent = '▼';
         expandBtn.setAttribute('aria-label', 'Show details');
         
-        // Add smooth animation
-        reasonElement.style.maxHeight = '0px';
+        // Add the hidden class after a short delay to ensure smooth animation
+        setTimeout(() => {
+            reasonElement.classList.add('hidden');
+        }, 400);
     }
 }
 
@@ -486,16 +535,8 @@ function saveCard() {
             hideAddCardForm();
             renderCards();
             
-            // Refresh recommendations after adding a new card
-            getCurrentWebsite().then(websiteInfo => {
-                if (websiteInfo) {
-                    analyzeWebsiteForRecommendations(websiteInfo, cards).then(recommendation => {
-                        if (recommendation && recommendation.recommendations && recommendation.recommendations.length > 0) {
-                            showRecommendations(websiteInfo, recommendation);
-                        }
-                    });
-                }
-            });
+            // Don't automatically refresh recommendations after adding a card
+            // User needs to click the button manually
         }
     });
 }
@@ -506,24 +547,9 @@ function deleteCard(cardId) {
     chrome.storage.local.set({ cards: cards }, () => {
         renderCards();
         
-        // Refresh recommendations after deleting a card
-        if (cards.length > 0) {
-            getCurrentWebsite().then(websiteInfo => {
-                if (websiteInfo) {
-                    analyzeWebsiteForRecommendations(websiteInfo, cards).then(recommendation => {
-                        if (recommendation && recommendation.recommendations && recommendation.recommendations.length > 0) {
-                            showRecommendations(websiteInfo, recommendation);
-                        } else {
-                            // Remove recommendation if no suitable card found
-                            removeRecommendation();
-                        }
-                    });
-                }
-            });
-        } else {
-            // Remove recommendation if no cards left
-            removeRecommendation();
-        }
+        // Remove recommendation when a card is deleted
+        // since the recommendation might no longer be valid
+        removeRecommendation();
     });
 }
 

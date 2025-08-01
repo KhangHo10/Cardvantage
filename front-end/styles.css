@@ -427,22 +427,165 @@ body.light-mode::before {
     max-width: 100%;
 }
 
+/* Updated section header to accommodate two buttons */
 .section-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
 }
 
-.section-header h2 {
-    font-size: 24px;
-    font-weight: 700;
-    color: #ffffff;
+.header-buttons {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+/* Get Recommendation Button */
+.get-recommendation-btn {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    border: none;
+    color: white;
+    padding: 10px 16px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.get-recommendation-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.6s ease;
+}
+
+.get-recommendation-btn:hover::before {
+    left: 100%;
+}
+
+.get-recommendation-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(239, 68, 68, 0.6);
+}
+
+.get-recommendation-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.get-recommendation-btn:disabled:hover {
+    transform: none;
+}
+
+/* Fix for recommendation card reason text being cut off */
+.card-reason {
+    background: rgba(255, 255, 255, 0.03);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    overflow: visible; /* Changed from hidden to visible */
+    max-height: none; /* Remove max-height constraint when visible */
+    transition: all 0.4s ease;
+    opacity: 1;
+}
+
+.light-mode .card-reason {
+    background: rgba(71, 85, 105, 0.05);
+    border-top: 1px solid rgba(71, 85, 105, 0.15);
+}
+
+.card-reason.hidden {
+    max-height: 0;
+    opacity: 0;
+    border-top: none;
+    padding: 0;
+    overflow: hidden; /* Only hide overflow when collapsed */
+    transition: all 0.4s ease;
+}
+
+.card-reason.hidden .reason-content {
+    padding: 0;
+    transition: padding 0.3s ease;
+}
+
+.reason-content {
+    padding: 16px;
+    transition: padding 0.3s ease;
+    word-wrap: break-word; /* Ensure long words break properly */
+    overflow-wrap: break-word; /* Modern alternative to word-wrap */
+    hyphens: auto; /* Add hyphenation for better text flow */
+}
+
+.reason-text {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1.6; /* Increased line height for better readability */
     transition: color 0.3s ease;
+    white-space: normal; /* Ensure text wraps normally */
+    word-break: break-word; /* Break long words if necessary */
 }
 
-.light-mode .section-header h2 {
-    color: #1e293b;
+.light-mode .reason-text {
+    color: rgba(30, 41, 59, 0.8);
+}
+
+/* Ensure the main content container can scroll properly */
+.main-content {
+    padding: 24px 20px;
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    max-height: calc(100vh - 80px); /* Ensure there's space for scrolling */
+}
+
+/* Improve the recommendation display container */
+.recommendation-display {
+    margin-bottom: 20px;
+    overflow: visible; /* Ensure nothing gets clipped */
+}
+
+.recommendation-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 20px;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    overflow: visible; /* Allow content to be fully visible */
+}
+
+.light-mode .recommendation-card {
+    background: rgba(71, 85, 105, 0.15);
+    border: 1px solid rgba(71, 85, 105, 0.2);
+}
+
+/* Ensure recommended cards don't have height restrictions */
+.recommended-card {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    overflow: visible; /* Changed from hidden to visible */
+    transition: all 0.3s ease;
+    margin-bottom: 4px;
+}
+
+.light-mode .recommended-card {
+    background: rgba(71, 85, 105, 0.1);
+    border: 1px solid rgba(71, 85, 105, 0.2);
 }
 
 .add-card-btn {
