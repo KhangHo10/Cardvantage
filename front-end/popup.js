@@ -10,6 +10,8 @@ let userAvatar, userName, addCardBtn, addCardForm;
 let cardNameInput, saveCardBtn, cancelCardBtn, cardsList, emptyState;
 let themeToggle, themeToggleMgmt, getRecommendationBtn;
 
+let cache = new Map();
+
 // Initialize the app
 document.addEventListener('DOMContentLoaded', () => {
     initializeDOM();
@@ -137,6 +139,20 @@ async function handleGetRecommendation() {
             alert('Unable to get current website information. Please make sure you\'re on a valid website.');
             return;
         }
+
+
+        // ===== CACHING HASHTABLE CODE =====
+
+        // const recommendation = null;
+        // if (cache.has(websiteInfo)){
+        //     recommendation = cache.get(websiteInfo);
+        //     console.log("cache hit");
+        // } else { 
+        //     recommendation = await analyzeWebsiteForRecommendations(websiteInfo, cards);
+        //     cache.set(websiteInfo, recommendation);
+        //     console.log("cache miss");
+        // }
+
 
         // Get recommendation from API
         const recommendation = await analyzeWebsiteForRecommendations(websiteInfo, cards);
