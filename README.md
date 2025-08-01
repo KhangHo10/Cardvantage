@@ -89,3 +89,10 @@ Follow these steps to set up and run the project locally.
 * **Savings tracking:** Track total savings over time and display with a visual (e.g. a growing tree) to show the user how much they have saved and encourage continued savings.
 * **Integration with budgeting tools:** Integrating with budgeting tools like Rocket Money and Honeydue to get a wider audience saving on credit rewards.
 * **Developing into an app:** After connecting to databases and running server side caching, we can then connect Cardvantage into a mobile app to give users savings on mobile shopping as well.
+
+## Contributors
+Ethan Ma
+Abel Addis
+Khang Ho
+Jenny Suwanchote
+Tianyi Shao
