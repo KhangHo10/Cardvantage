@@ -90,6 +90,9 @@ Follow these steps to set up and run the project locally.
 * **Integration with budgeting tools:** Integrating with budgeting tools like Rocket Money and Honeydue to get a wider audience saving on credit rewards.
 * **Developing into an app:** After connecting to databases and running server side caching, we can then connect Cardvantage into a mobile app to give users savings on mobile shopping as well.
 
+## Demo
+[![Demo Video](https://img.youtube.com/vi/c2FOd5cV_DI/0.jpg)](https://www.youtube.com/watch?v=c2FOd5cV_DI)
+
 ## Contributors
 Ethan Ma <br />
 Abel Addis <br />
